@@ -94,34 +94,28 @@ def cross_entropy(pred, target):
 
 class Weight_Filter(nn.Module):
 
-    def __init__(self, weight, num_classes):
+    def __init__(self, scale, kernel_size=3):
         super(Weight_Filter, self).__init__()
-        self.net = nn.Linear(num_classes, num_classes, bias=False)
-        self.weight = weight
-        self.num_classes = num_classes
+        self.kernel_size = kernel_size
+        self.scale = scale
+        self.extension = int((self.kernel_size - 1)/2)
+        self.padding = nn.ReflectionPad2d(self.extension)
+
+    def compute_weight(self, input):
+        normalized = (input - torch.mean(input)) / torch.std(input)
+        return self.scale * torch.sigmoid(normalized)
         
-    def put_weight(self, weight, num_classes):
-        C = torch.ones(num_classes) - num_classes * torch.eye(num_classes)
-        T = torch.diagflat(weight)
-        identity = torch.eye(num_classes)
-
-        C, T, identity = C.cuda(), T.cuda(), identity.cuda()
-       
-        weight_matrix = identity + 1 / (num_classes - 1) * torch.matmul(T, C)
-
-        self.net.weight.data = weight_matrix
-        self.net.weight.requires_grad = False
-
     def forward(self, residual):
-        output = []
+        residual_pad = self.padding(residual)
+        output = torch.empty(residual.size()).cuda()
 
-        for i in range(residual.size(0)):
-            residual_sample = residual[i]
-            self.put_weight(self.weight[i], self.num_classes)
-            output.append(self.net(torch.abs(residual_sample)))
+        weight = self.compute_weight(residual).cuda()
 
-        output = torch.stack(output)
-        return output
+        for i in range(self.kernel_size):
+            for j in range(self.kernel_size):
+                 output += weight * residual_pad[:, :, i:residual.size(0)+i, j:residual.size(1)+j]
+        
+        return output / (self.kernel_size**2)
 
 
 class Weight_Network(nn.Module):

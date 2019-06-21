@@ -58,7 +58,7 @@ now             = datetime.datetime.now()
 time_stamp      = now.strftime('%F_%H_%M_%S')
 result_directory = args.result_dir + time_stamp + '_' + moreInfo
 
-sys.path.insert(0, '../util')
+sys.path.insert(0, './util')
 
 from smoothing_util import *
 
@@ -123,7 +123,7 @@ def train(epoch):
         ans = torch.zeros(output.size()).cuda()
 
         if smoothing == 'on':
-            #loss = objective(Filter(residual), ans)
+            loss = objective(Filter(residual), ans)
             #loss = torch.sum((residual**2)*Filter(residual)) / len(data)
         else:
             loss = objective(residual, ans)

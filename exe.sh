@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HOME=/home2/image/cjh/code/FusionNet
+HOME=/home//chojunghee/code/FusionNet
 PROG=$HOME/seg-main.py
 LOG=$HOME/result/log
 
@@ -12,7 +12,7 @@ name="FusionNet"
 mt='0.0'
 wd='0.0'
 iter='1'
-moreInfo='original'
+moreInfo='smoothing,laplace,b=0.5'
 smoothing='on'
 
 for bs in $list_batch_size; do
