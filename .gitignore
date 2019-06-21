@@ -1,4 +1,4 @@
 *.out
 *.pyc
-
-result/
+.__pycache__/
+.result/
