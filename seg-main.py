@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 from torchvision import datasets, transforms, models
+from torchvision.utils import save_image
 from torch.autograd import Variable
 
 import sys, os, time, datetime
@@ -57,8 +58,21 @@ now             = datetime.datetime.now()
 time_stamp      = now.strftime('%F_%H_%M_%S')
 result_directory = args.result_dir + time_stamp + '_' + moreInfo
 
-scale_initial = torch.tensor(0.0)
-scale = torch.zeros(epochs) + scale_initial
+sys.path.insert(0, '../util')
+
+from smoothing_util import *
+
+#-------------------------------------------------------------------------------
+# smoothing parameters
+#------------------------------------------------------------------------------
+scale = torch.zeros(epochs)
+index = torch.linspace(-5, 5, epochs)
+b = torch.tensor(0.5)
+mu = torch.tensor(2.5)
+#scale = 1/(torch.cosh((index - mu)/(2*b))**2)                              # logistic
+scale = torch.exp(-torch.abs(index - mu)/b)                                     # laplace
+scale = scale * torch.clone(scale>torch.tensor(0.001)).detach().float()          # truncate the small scales
+
 # -----------------------------------------------------------------------------
 # load dataset
 # -----------------------------------------------------------------------------
@@ -74,6 +88,7 @@ set_test    = EM_dataset(root = data_path, sigma = 0, train = False, transform=t
 
 pad_size = 64
 padding = nn.ReflectionPad2d(pad_size)
+
 # -----------------------------------------------------------------------------
 # function for training the model
 # -----------------------------------------------------------------------------
@@ -86,8 +101,7 @@ def train(epoch):
     
     if smoothing == 'on':
         #Filter = Layer_smoothing_filter(smoothing_number[epoch], num_classes, scale[epoch], epoch, gpu=bCuda).cuda()
-        #Filter = Weight_Filter(scale[epoch])
-        pass
+        Filter = Weight_Filter(scale[epoch])
 
     # grid with shape N x H x W x 2
     perturbed_grid = make_perturbed_grid(512, 512).unsqueeze(0).repeat(batch_size,1,1,1)
@@ -111,7 +125,6 @@ def train(epoch):
         if smoothing == 'on':
             #loss = objective(Filter(residual), ans)
             #loss = torch.sum((residual**2)*Filter(residual)) / len(data)
-            pass
         else:
             loss = objective(residual, ans)
 
