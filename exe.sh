@@ -12,8 +12,8 @@ name="FusionNet"
 mt='0.0'
 wd='0.0'
 iter='1'
-moreInfo='smoothing,laplace,b=0.5'
-smoothing='on'
+moreInfo='original'
+smoothing='off'
 
 for bs in $list_batch_size; do
    CUDA_VISIBLE_DEVICES=$1 python -u $PROG --model_name $name --epochs $epoch --batch_size $bs --lr_initial $li --lr_final $lf \

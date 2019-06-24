@@ -19,8 +19,6 @@ import argparse
 import visdom
 from PIL import Image
 
-from EM_dataset import *
-
 # -----------------------------------------------------------------------------
 # parameters from the argument 
 # -----------------------------------------------------------------------------
@@ -61,6 +59,7 @@ result_directory = args.result_dir + time_stamp + '_' + moreInfo
 sys.path.insert(0, './util')
 
 from smoothing_util import *
+from EM_dataset import *
 
 #-------------------------------------------------------------------------------
 # smoothing parameters

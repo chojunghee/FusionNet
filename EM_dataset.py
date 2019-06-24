@@ -30,7 +30,7 @@ class EM_dataset(torch.utils.data.Dataset):
         
         else:
             path = os.path.join(self.root, self.test_folder)
-            images = [cv2.imread(file) for file in glob.glob(path + '/*.jpg')]
+            images = [cv2.imread(file) for file in sorted(glob.glob(path + '/*.jpg'))]
             self.data = np.stack(images, axis=0)
 
         if color == False:
@@ -75,8 +75,8 @@ def data_aug(img):
 
 def datagenerator(input_data_dir, gt_data_dir, sigma):
     # get name list of all .jpg files
-    input_file_list = glob.glob(input_data_dir+'/*.jpg')  
-    gt_file_list = glob.glob(gt_data_dir+'/*.jpg')
+    input_file_list = sorted(glob.glob(input_data_dir+'/*.jpg'))  
+    gt_file_list = sorted(glob.glob(gt_data_dir+'/*.jpg'))
     # initialize
     data = []
     # augment data

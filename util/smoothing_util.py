@@ -102,20 +102,23 @@ class Weight_Filter(nn.Module):
         self.padding = nn.ReflectionPad2d(self.extension)
 
     def compute_weight(self, input):
-        normalized = (input - torch.mean(input)) / torch.std(input)
+        normalized = (input - torch.mean(input)) / (torch.std(input) + 1e-10)
         return self.scale * torch.sigmoid(normalized)
         
     def forward(self, residual):
         residual_pad = self.padding(residual)
-        output = torch.empty(residual.size()).cuda()
+        output = torch.zeros(residual.size()).cuda()
 
         weight = self.compute_weight(residual).cuda()
 
         for i in range(self.kernel_size):
             for j in range(self.kernel_size):
-                 output += weight * residual_pad[:, :, i:residual.size(0)+i, j:residual.size(1)+j]
-        
-        return output / (self.kernel_size**2)
+                if (i == self.extension) and (j == self.extension):
+                     output += (1-weight) * residual_pad[:, :, i:residual.size(2)+i, j:residual.size(3)+j]
+                else:
+                     output += weight / (self.kernel_size**2 - 1) * residual_pad[:, :, i:residual.size(2)+i, j:residual.size(3)+j]
+
+        return output
 
 
 class Weight_Network(nn.Module):
