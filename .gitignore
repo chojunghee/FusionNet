@@ -1,7 +1,8 @@
 *.out
 *.pyc
-.__pycache__/
+__pycache__/
 result/
 .nv/
 .vscode/
 .cache/
+.config/
