@@ -89,7 +89,7 @@ def datagenerator(input_data_dir, gt_data_dir, sigma):
             data.append(np.concatenate((augmented_input[j], augmented_gt[j]), axis=1))
     #data = np.array(data, dtype='uint8')
     #data = data.reshape((data.shape[0]*data.shape[1], data.shape[2], data.shape[3], 3))
-    np.stack(data, axis=0)
+    data = np.stack(data, axis=0)
     print('training data finished')
     return data
 
