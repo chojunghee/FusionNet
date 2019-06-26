@@ -120,12 +120,13 @@ def train(epoch):
 
         residual = torch.abs(output - gt)
         ans = torch.zeros(output.size()).cuda()
+        tv_pad = nn.ReplicationPad2d(1)
 
         if smoothing == 'on':
             loss = objective(Filter(residual), ans)
             #loss = torch.sum((residual**2)*Filter(residual)) / len(data)
         else:
-            loss = objective(residual, ans)
+            loss = objective(residual, ans) + 0.01*torch.sum(torch.sqrt((tv_pad(output)[:,:,2:,1:-1] - output)**2 + (tv_pad(output)[:,:,1:-1,2:] - output)**2 + 1e-10))
 
         loss_for_graph = objective(residual, ans)
         # loss = objective(output, target)
