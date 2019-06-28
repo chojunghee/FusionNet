@@ -87,10 +87,14 @@ def onehot_smoothing(target, num_classes, eps):
     one_hot = one_hot + eps/(num_classes - 1) * torch.ones(batchsize, num_classes).cuda()  
     return one_hot
 
-def cross_entropy(pred, target):
-    logsoftmax = nn.LogSoftmax(dim=1)
-    return torch.mean(torch.sum(-target * logsoftmax(pred), 1))
+def Huber(input, mu):
+    pad = nn.ReplicationPad2d(1)
+    output = torch.sqrt((pad(input)[:,:,2:,1:-1] - input)**2 + (pad(input)[:,:,1:-1,2:] - input)**2 )
+    l2 = output**2 / (2*mu) * torch.clone(output < torch.tensor(mu)).detach().float().cuda()
+    l1 = (output - mu/2) * torch.clone(output >= torch.tensor(mu)).detach().float().cuda() 
+    output = torch.sum(l1 + l2)
 
+    return output 
 
 class Weight_Filter(nn.Module):
 
