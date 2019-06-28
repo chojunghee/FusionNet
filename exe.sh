@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HOME=/home//chojunghee/code/FusionNet
+HOME=/home/chojunghee/code/FusionNet
 PROG=$HOME/seg-main.py
 LOG=$HOME/result/log
 
