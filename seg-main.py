@@ -78,13 +78,22 @@ scale = scale * torch.clone(scale>torch.tensor(0.001)).detach().float()         
 # -----------------------------------------------------------------------------
 bCuda = torch.cuda.is_available()
 
-transform = transforms.Compose([
+""" transform = transforms.Compose([
                 transforms.Grayscale(num_output_channels=1),
+                transforms.ToTensor()       
+            ]) """
+
+""" set_train   = EM_dataset(root = data_path, sigma = 25, train = True, transform=transform)
+set_test    = EM_dataset(root = data_path, sigma = 0, train = False, transform=transform) """
+
+transform = transforms.Compose([
+                #transforms.Grayscale(num_output_channels=1),
                 transforms.ToTensor()       
             ])
 
-set_train   = EM_dataset(root = data_path, sigma = 25, train = True, transform=transform)
-set_test    = EM_dataset(root = data_path, sigma = 0, train = False, transform=transform)
+from COCO_dataset import *
+set_train   = COCO_dataset(root = '../data/coco' , train = True, transform=transform)
+#set_test    = COCO_dataset(root = '../data/coco', train = False, transform=transform)
 
 pad_size = 64
 padding = nn.ReflectionPad2d(pad_size)
@@ -178,12 +187,13 @@ for iter in range(iteration):
 
     print('%d-th trial' % (iter+1))
 
-    loader_train    = torch.utils.data.DataLoader(set_train, batch_size = batch_size, shuffle = True, drop_last = True)
+    """ loader_train    = torch.utils.data.DataLoader(set_train, batch_size = batch_size, shuffle = True, drop_last = True) """
     
-    """ sample_indices = getSampleIndices(set_train, 0.5, num_classes)
+    sample_indices = getSampleIndices(set_train, 0.001, 1, COCO=True)
     train_sampler   = torch.utils.data.SubsetRandomSampler(sample_indices)    # when using only fraction of training dataset
-    loader_train    = torch.utils.data.DataLoader(set_train, batch_size = batch_size, sampler = train_sampler, drop_last=True)
-    """
+    loader_train    = torch.utils.data.DataLoader(set_train, batch_size = batch_size, sampler = train_sampler, 
+                                                  collate_fn = my_collate, drop_last=True)
+   
     loader_test     = torch.utils.data.DataLoader(set_test, batch_size = batch_size, shuffle = False, drop_last = True)
 
     # -----------------------------------------------------------------------------
