@@ -60,6 +60,7 @@ sys.path.insert(0, './util')
 
 from smoothing_util import *
 from EM_dataset import *
+from DataSampler import getSampleIndices
 
 #-------------------------------------------------------------------------------
 # smoothing parameters
@@ -178,6 +179,11 @@ for iter in range(iteration):
     print('%d-th trial' % (iter+1))
 
     loader_train    = torch.utils.data.DataLoader(set_train, batch_size = batch_size, shuffle = True, drop_last = True)
+    
+    """ sample_indices = getSampleIndices(set_train, 0.5, num_classes)
+    train_sampler   = torch.utils.data.SubsetRandomSampler(sample_indices)    # when using only fraction of training dataset
+    loader_train    = torch.utils.data.DataLoader(set_train, batch_size = batch_size, sampler = train_sampler, drop_last=True)
+    """
     loader_test     = torch.utils.data.DataLoader(set_test, batch_size = batch_size, shuffle = False, drop_last = True)
 
     # -----------------------------------------------------------------------------

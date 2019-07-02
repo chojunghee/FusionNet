@@ -89,7 +89,7 @@ def onehot_smoothing(target, num_classes, eps):
 
 def Huber(input, mu):
     pad = nn.ReplicationPad2d(1)
-    output = torch.sqrt((pad(input)[:,:,2:,1:-1] - input)**2 + (pad(input)[:,:,1:-1,2:] - input)**2 )
+    output = torch.sqrt((pad(input)[:,:,2:,1:-1] - input)**2 + (pad(input)[:,:,1:-1,2:] - input)**2 + 1e-10)
     l2 = output**2 / (2*mu) * torch.clone(output < torch.tensor(mu)).detach().float().cuda()
     l1 = (output - mu/2) * torch.clone(output >= torch.tensor(mu)).detach().float().cuda() 
     output = torch.sum(l1 + l2)
