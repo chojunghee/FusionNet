@@ -1,7 +1,7 @@
 #!/bin/bash
 
-HOME=/data1/home/cjh/DeepLearning/code/FusionNet
-PROG=$HOME/seg-main.py
+HOME=/home/cjh/code/FusionNet
+PROG=$HOME/main_stanford.py
 LOG=$HOME/result/log
 
 list_batch_size='1'
@@ -12,7 +12,7 @@ name="FusionNet"
 mt='0.0'
 wd='0.0'
 iter='1'
-moreInfo='original'
+moreInfo='stanford,original'
 smoothing='off'
 
 for bs in $list_batch_size; do

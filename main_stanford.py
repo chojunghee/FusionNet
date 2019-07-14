@@ -18,6 +18,7 @@ import openpyxl
 import argparse
 import visdom
 from PIL import Image
+import matplotlib.pyplot as plt
 
 # -----------------------------------------------------------------------------
 # parameters from the argument 
@@ -25,15 +26,15 @@ from PIL import Image
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--model_name', default='FusionNet', type=str, help='choose a type of model')
-parser.add_argument('--dataset', default='EMseg', type=str, help='choose a dataset')
-parser.add_argument('--data_path', default='../../data/EM_segmentation/', type=str, help='path to data directory')
+parser.add_argument('--dataset', default='stanford', type=str, help='choose a dataset')
+parser.add_argument('--data_path', default='../../data/stanford/', type=str, help='path to data directory')
 parser.add_argument('--batch_size', default=1, type=int, help='batch size')
 parser.add_argument('--epochs', default=50, type=int, help='number of train epoches')
 parser.add_argument('--lr_initial', default=1e-3, type=float, help='initial learning rate')
 parser.add_argument('--lr_final', default=1e-3, type=float, help='final learning rate ')
 parser.add_argument('--weight_decay',   type=float, default=0.0)
 parser.add_argument('--momentum',       type=float, default=0.0)
-parser.add_argument('--result_dir', default='../result/', type=str, help='directory of test dataset')
+parser.add_argument('--result_dir', default='./result/', type=str, help='directory of test dataset')
 parser.add_argument('--iteration', default=5, type=int, help='number of trials')
 parser.add_argument('--moreInfo', default=None, type=str, help='add more information on trial to the visdom window')
 parser.add_argument('--smoothing', default='off', type=str, help='smooth the residual')
@@ -59,8 +60,8 @@ result_directory = args.result_dir + time_stamp + '_' + moreInfo
 sys.path.insert(0, '../util')
 
 from smoothing_util import *
-from EM_dataset import *
-from FusionNet import *
+from stanford_dataset import *
+num_classes = 9
 
 #-------------------------------------------------------------------------------
 # smoothing parameters
@@ -71,7 +72,7 @@ b = torch.tensor(0.5)
 mu = torch.tensor(2.5)
 #scale = 1/(torch.cosh((index - mu)/(2*b))**2)                              # logistic
 scale = torch.exp(-torch.abs(index - mu)/b)                                     # laplace
-scale = scale * torch.clone(scale>torch.tensor(0.001)).detach().float()          # truncate the small scales
+scale = scale * torch.clone(scale>torch.tensor(0.001)).detach().float()          # truncate the small scales 
 
 # -----------------------------------------------------------------------------
 # load dataset
@@ -79,15 +80,11 @@ scale = scale * torch.clone(scale>torch.tensor(0.001)).detach().float()         
 bCuda = torch.cuda.is_available()
 
 transform = transforms.Compose([
-                transforms.Grayscale(num_output_channels=1),
                 transforms.ToTensor()       
             ])
 
-set_train   = EM_dataset(root = data_path, sigma = 25, train = True, transform=transform)
-set_test    = EM_dataset(root = data_path, sigma = 0, train = False, transform=transform)
-
-pad_size = 64
-padding = nn.ReflectionPad2d(pad_size)
+set_train   = stanford_dataset(root = data_path, train = True, transform=transform)
+set_test    = stanford_dataset(root = data_path, train = False, transform=transform)
 
 # -----------------------------------------------------------------------------
 # function for training the model
@@ -103,35 +100,23 @@ def train(epoch):
         #Filter = Layer_smoothing_filter(smoothing_number[epoch], num_classes, scale[epoch], epoch, gpu=bCuda).cuda()
         Filter = Weight_Filter(scale[epoch])
 
-    # grid with shape N x H x W x 2
-    perturbed_grid = make_perturbed_grid(512, 512).unsqueeze(0).repeat(batch_size,1,1,1)
-
-    for idx_batch, data in enumerate(loader_train):
+    for idx_batch, (input, label) in enumerate(loader_train):
         
-        # elastic deformation and pad the image
-        data[0] = F.grid_sample(data[0], perturbed_grid, mode='bilinear', padding_mode='border')
-        data[1] = F.grid_sample(data[1], perturbed_grid, mode='bilinear', padding_mode='border')
-        data[0], data[1] = padding(data[0]), padding(data[1])      
+        # eliminate the negative label
+        label = (label<0).long()*(num_classes-1) + (label>=0).long()*label
 
         if bCuda:
-            input, gt = data[0].cuda(), data[1].cuda()
-        
+            input, label = input.cuda(), label.cuda()
+
         optimizer.zero_grad()
         output = model(input)
-
-        residual = torch.abs(output - gt)
-        ans = torch.zeros(output.size()).cuda()
-        tv_pad = nn.ReplicationPad2d(1)
         
         if smoothing == 'on':
             loss = objective(Filter(residual), ans)
-            #loss = torch.sum((residual**2)*Filter(residual)) / len(data)
         else:
-            mu = torch.tensor(0.01).cuda()
-            #loss = objective(residual, ans) + 1e-7*torch.sum(torch.sqrt((tv_pad(output)[:,:,2:,1:-1] - output)**2 + (tv_pad(output)[:,:,1:-1,2:] - output)**2 + 1e-10))
-            loss = objective(residual, ans) + 1e-5*Huber(output, mu)
+            loss = objective(output, label)
 
-        loss_for_graph = objective(residual, ans)
+        loss_for_graph = objective(output, label)
         # loss = objective(output, target)
         # lsm     = F.log_softmax(output)
         # loss    = F.nll_loss(lsm, target)
@@ -155,16 +140,12 @@ def test():
 
         for idx_batch, data in enumerate(loader_test):
             
-            # pad the image
-            data = padding(data)                     
-
             if bCuda:
                 input = data.cuda()
 
             output = model(input)
-            
-            # crop the padded area
-            test_result.append(output[:,:,pad_size:-pad_size,pad_size:-pad_size])       
+            pred   = output.data.max(1)[1]
+            test_result.append(pred)       
 
         return test_result
 
@@ -185,7 +166,7 @@ for iter in range(iteration):
     # load neural network model
     # -----------------------------------------------------------------------------
     from FusionNet import *
-    model = FusionNet(kernel=3)
+    model = FusionNet(kernel=3, num_classes=num_classes, input_channels=3)
 
     if bCuda:
         model = model.cuda()
@@ -208,10 +189,9 @@ for iter in range(iteration):
         scheduler   = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75], gamma=0.01)
 
     # Loss functions
-    # objective = nn.CrossEntropyLoss()
-    objective = nn.MSELoss()
+    objective = nn.CrossEntropyLoss()
 
-    # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # print out the model information
 # -----------------------------------------------------------------------------
 # print(model)
@@ -235,10 +215,11 @@ for iter in range(iteration):
             result_test  = test()
             # save results
             os.makedirs(result_directory)
+            cm = plt.cm.RdYlGn
             for i in range(len(result_test)):
-                result_img = np.squeeze(result_test[i][0].permute(1,2,0).cpu().numpy())
-                im = Image.fromarray(np.uint8(result_img*255))
-                im.save(result_directory +'/result_'+str(i)+'.jpg')
+                for j in range(result_test[i].size(0)):
+                    im = result_test[i,j]
+                    plt.imsave(result_directory +'/result_'+ str(i*batch_size + j + 1) +'.jpg', im, cmap=cm)
 
         loss_train[e,iter]   = result_train['loss_train_mean']
 
