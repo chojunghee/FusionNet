@@ -6,8 +6,8 @@ LOG=$HOME/result/log
 
 list_batch_size='1'
 epoch='100'
-li='1e-4'
-lf='1e-4' 
+li='1e-3'
+lf='1e-3' 
 name="FusionNet"
 mt='0.0'
 wd='0.0'
