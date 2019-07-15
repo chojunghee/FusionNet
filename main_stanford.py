@@ -34,7 +34,7 @@ parser.add_argument('--lr_initial', default=1e-3, type=float, help='initial lear
 parser.add_argument('--lr_final', default=1e-3, type=float, help='final learning rate ')
 parser.add_argument('--weight_decay',   type=float, default=0.0)
 parser.add_argument('--momentum',       type=float, default=0.0)
-parser.add_argument('--result_dir', default='./result/', type=str, help='directory of test dataset')
+parser.add_argument('--result_dir', default='../result/', type=str, help='directory of test dataset')
 parser.add_argument('--iteration', default=5, type=int, help='number of trials')
 parser.add_argument('--moreInfo', default=None, type=str, help='add more information on trial to the visdom window')
 parser.add_argument('--smoothing', default='off', type=str, help='smooth the residual')
@@ -134,11 +134,11 @@ def test():
     # print('test the model at given epoch')
 
     test_result = []
-
+    filename = []
     with torch.no_grad():
         model.eval()
 
-        for idx_batch, data in enumerate(loader_test):
+        for idx_batch, (data, name) in enumerate(loader_test):
             
             if bCuda:
                 input = data.cuda()
@@ -146,8 +146,9 @@ def test():
             output = model(input)
             pred   = output.data.max(1)[1]
             test_result.append(pred)       
+            filename.append(name)
 
-        return test_result
+        return test_result, filename
 
 loss_train = np.zeros((epochs, iteration))
 
@@ -212,14 +213,14 @@ for iter in range(iteration):
 
         # At last epoch, test the model
         if e == epochs - 1:
-            result_test  = test()
+            result_test, filename  = test()
             # save results
             os.makedirs(result_directory)
             cm = plt.cm.RdYlGn
             for i in range(len(result_test)):
                 for j in range(result_test[i].size(0)):
-                    im = result_test[i,j]
-                    plt.imsave(result_directory +'/result_'+ str(i*batch_size + j + 1) +'.jpg', im, cmap=cm)
+                    im = result_test[i][j].cpu().numpy()
+                    plt.imsave(result_directory +'/result_'+ filename[i][j], im, cmap=cm)
 
         loss_train[e,iter]   = result_train['loss_train_mean']
 

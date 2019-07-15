@@ -29,6 +29,7 @@ class stanford_dataset(torch.utils.data.Dataset):
         else:
             path = os.path.join(self.root, self.test_image_folder)
             self.images = [cv2.imread(file) for file in sorted(glob.glob(path + '/*'), key=lambda f: int(''.join(filter(str.isdigit, f))))]
+            self.filename = [os.path.basename(file) for file in sorted(glob.glob(path + '/*'), key=lambda f: int(''.join(filter(str.isdigit, f))))]
 
     def __len__(self):
         return len(self.images)
@@ -46,9 +47,9 @@ class stanford_dataset(torch.utils.data.Dataset):
 
         else:
             # return PIL image
-            input = Image.fromarray(np.uint8(self.images[index]))
+            input, filename = Image.fromarray(np.uint8(self.images[index])), self.filename[index]
 
             if self.transform is not None:
                 input = self.transform(input)
-            return input
+            return input, filename
 
