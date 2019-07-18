@@ -167,7 +167,12 @@ for iter in range(iteration):
     # load neural network model
     # -----------------------------------------------------------------------------
     from FusionNet import *
-    model = FusionNet(kernel=3, num_classes=num_classes, input_channels=3)
+    from Unet import *
+
+    if model_name == 'FusionNet':
+        model = FusionNet(kernel=3, num_classes=num_classes, input_channels=3)
+    elif model_name == 'Unet':
+        model = Unet(kernel=3, num_classes=num_classes, input_channels=3)
 
     if bCuda:
         model = model.cuda()
