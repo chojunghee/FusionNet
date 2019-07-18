@@ -45,7 +45,7 @@ class Unet(nn.Module):
 
         x8 = self.concat(x8,x1)
         x9 = self.upblock1(x8)
-        
+
         out = self.output(x9)
 
         return out
@@ -64,13 +64,10 @@ class Unet(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def concat(self, small, big):
-        small_h, small_w = small.size()[2:]
         big_h,   big_w   = big.size()[2:]
-        half_h = (big_h - small_h) // 2
-        half_w = (big_w - small_w) // 2
-        crop = big[:,:,half_h:half_h+small_h,half_w:half_w+small_w]
+        small = F.upsample_bilinear(small,size=(big_h,big_w))
 
-        return torch.cat([small,crop],dim=1)
+        return torch.cat([small,big],dim=1)
 
 
 class convolution_block(nn.Module):
@@ -83,7 +80,7 @@ class convolution_block(nn.Module):
         self.block2         = self.make_block(self.out_channels, self.out_channels)
 
     def make_block(self, in_channels, out_channels):
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size = self.kernel, stride=1, padding=0, bias=True)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size = self.kernel, stride=1, padding=(self.kernel-1)//2, bias=True)
         return nn.Sequential(self.conv, nn.ReLU())
 
     def forward(self, x):
