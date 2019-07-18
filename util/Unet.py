@@ -65,9 +65,9 @@ class Unet(nn.Module):
 
     def concat(self, small, big):
         big_h,   big_w   = big.size()[2:]
-        small = F.upsample_bilinear(small,size=(big_h,big_w))
+        small = F.interpolate(small, size=(big_h,big_w), mode='bilinear')
 
-        return torch.cat([small,big],dim=1)
+        return torch.cat([small,big], dim=1)
 
 
 class convolution_block(nn.Module):
