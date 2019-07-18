@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+# modified for image segmentation other than EM dataset
 class FusionNet(nn.Module):
 
     def __init__(self, kernel, num_classes=None, input_channels=1):
