@@ -53,3 +53,16 @@ class stanford_dataset(torch.utils.data.Dataset):
                 input = self.transform(input)
             return input, filename
 
+
+
+
+# for a batch with variable-size images
+def my_collate_train(batch):
+    data = [item[0] for item in batch]
+    target = [torch.LongTensor(item[1]) for item in batch]
+    return [data, target]
+
+def my_collate_test(batch):
+    data = [item[0] for item in batch]
+    target = [item[1] for item in batch]
+    return [data, target]

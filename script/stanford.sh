@@ -4,13 +4,13 @@ HOME=/home/chojunghee/code/FusionNet
 PROG=$HOME/main_stanford.py
 LOG=$HOME/result/log
 
-list_batch_size='1'
-epoch='1000'
+list_batch_size='2'
+epoch='200'
 li='1e-2'
 lf='1e-2' 
 #name="FusionNet"
 name="Unet"
-mt='0.0'
+mt='0.9'
 wd='0.0'
 iter='1'
 moreInfo='stanford,original'

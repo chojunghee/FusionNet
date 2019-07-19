@@ -102,24 +102,30 @@ def train(epoch):
 
     for idx_batch, (input, label) in enumerate(loader_train):
         
-        # eliminate the negative label
-        label = (label<0).long()*(num_classes-1) + (label>=0).long()*label
+        loss = 0
+        loss_for_graph = 0
 
-        if bCuda:
-            input, label = input.cuda(), label.cuda()
+        for i in range(len(input)):
+            # eliminate the negative label
+            label[i] = (label[i]<0).long()*(num_classes-1) + (label[i]>=0).long()*label[i]
 
-        optimizer.zero_grad()
-        output = model(input)
-        
-        if smoothing == 'on':
-            loss = objective(Filter(residual), ans)
-        else:
-            loss = objective(output, label)
+            if bCuda:
+                data, target = input[i].unsqueeze(0).cuda(), label[i].unsqueeze(0).cuda()
 
-        loss_for_graph = objective(output, label)
+            optimizer.zero_grad()
+            output = model(data)
+            
+            if smoothing == 'on':
+                loss += objective(Filter(residual), ans)
+            else:
+                loss += objective(output, target)
+
+            loss_for_graph += objective(output, target)
         # loss = objective(output, target)
         # lsm     = F.log_softmax(output)
         # loss    = F.nll_loss(lsm, target)
+        loss = loss / len(input)
+        loss_for_graph = loss_for_graph / len(input)
         loss.backward()
         optimizer.step()
         loss_train.append(loss_for_graph.item())
@@ -139,14 +145,15 @@ def test():
         model.eval()
 
         for idx_batch, (data, name) in enumerate(loader_test):
-            
-            if bCuda:
-                input = data.cuda()
 
-            output = model(input)
-            pred   = output.data.max(1)[1]
-            test_result.append(pred)       
-            filename.append(name)
+            for i in range(len(data)):
+                if bCuda:
+                    input = data[i].unsqueeze(0).cuda()
+
+                output = model(input)
+                pred   = output.data.max(1)[1]
+                test_result.append(pred)       
+                filename.append(name[i])
 
         return test_result, filename
 
@@ -160,8 +167,8 @@ for iter in range(iteration):
 
     print('%d-th trial' % (iter+1))
 
-    loader_train    = torch.utils.data.DataLoader(set_train, batch_size = batch_size, shuffle = True, drop_last = True)
-    loader_test     = torch.utils.data.DataLoader(set_test, batch_size = batch_size, shuffle = False, drop_last = True)
+    loader_train    = torch.utils.data.DataLoader(set_train, batch_size = batch_size, shuffle = True, collate_fn=my_collate_train, drop_last = True)
+    loader_test     = torch.utils.data.DataLoader(set_test, batch_size = batch_size, shuffle = False, collate_fn=my_collate_test, drop_last = True)
 
     # -----------------------------------------------------------------------------
     # load neural network model
@@ -223,9 +230,8 @@ for iter in range(iteration):
             os.makedirs(result_directory)
             cm = plt.cm.RdYlGn
             for i in range(len(result_test)):
-                for j in range(result_test[i].size(0)):
-                    im = result_test[i][j].cpu().numpy()
-                    plt.imsave(result_directory +'/result_'+ filename[i][j], im, cmap=cm)
+                    im = result_test[i].squeeze().cpu().numpy()
+                    plt.imsave(result_directory +'/result_'+ filename[i], im, cmap=cm)
 
         loss_train[e,iter]   = result_train['loss_train_mean']
 
