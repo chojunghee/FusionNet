@@ -96,10 +96,10 @@ def train(epoch):
 
     model.train()
     
-    if smoothing == 'on':
+    """ if smoothing == 'on':
         #Filter = Layer_smoothing_filter(smoothing_number[epoch], num_classes, scale[epoch], epoch, gpu=bCuda).cuda()
-        Filter = Weight_Filter(scale[epoch])
-
+        Filter = Weight_Filter(scale[epoch]) """
+ 
     for idx_batch, (input, label) in enumerate(loader_train):
         
         loss = 0
@@ -111,12 +111,15 @@ def train(epoch):
 
             if bCuda:
                 data, target = input[i].unsqueeze(0).cuda(), label[i].unsqueeze(0).cuda()
+                eps          = torch.tensor(1e-15).cuda()
 
             optimizer.zero_grad()
             output = model(data)
             
             if smoothing == 'on':
-                loss += objective(Filter(residual), ans)
+                output_prob = F.softmax(output, dim=1)
+                smoothing_regularizer = torch.sum(output_prob * torch.log(output_prob + eps)) / (output.size(2)*output.size(3))
+                loss += objective(output, target) + smoothing_regularizer
             else:
                 loss += objective(output, target)
 
@@ -199,7 +202,7 @@ for iter in range(iteration):
 
         optimizer   = optim.SGD(model.parameters(), lr = lr_initial, momentum = momentum, weight_decay = weight_decay)
         #scheduler   = scheduler_learning_rate_sigmoid(optimizer, lr_initial, lr_final, epochs)
-        scheduler   = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75], gamma=0.01)
+        scheduler   = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75], gamma=0.1)
 
     # Loss functions
     objective = nn.CrossEntropyLoss()
